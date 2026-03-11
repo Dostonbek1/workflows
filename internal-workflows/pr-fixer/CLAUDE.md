@@ -36,18 +36,23 @@ Run the fetch script to collect all data for the PR:
 
 This produces:
 
+- `artifacts/pr-fixer/{number}/summary.md` — **read this first** — compact overview with mergeable status, CI summary, comment counts, and author breakdown
 - `artifacts/pr-fixer/{number}/pr.json` — PR metadata (title, body, labels, branch, mergeable status, etc.)
-- `artifacts/pr-fixer/{number}/comments.json` — unified chronological comment stream (all reviews, inline comments, and discussion merged together)
-- `artifacts/pr-fixer/{number}/diff.json` — diff files with patches
+- `artifacts/pr-fixer/{number}/comments.json` — unified chronological comment stream (all comments merged — may be large)
+- `artifacts/pr-fixer/{number}/comments/01.json`, `02.json`, ... — **individual comment files** (read these instead of the full `comments.json` to stay under token limits)
+- `artifacts/pr-fixer/{number}/diff.json` — diff files with patches (may be large for big PRs — use `jq` to extract specific files)
 - `artifacts/pr-fixer/{number}/ci.json` — check run results
 
 ### Phase 2: Assess PR State
 
-Read the fetched data to build a picture of what needs fixing. Check:
+**Start by reading `summary.md`** — it gives you the full picture in ~20 lines: mergeable status, CI failures, comment counts, who commented.
 
-1. **Merge conflicts** — is `mergeable` set to `CONFLICTING`? If so, rebase is needed first.
-2. **CI status** — are any checks failing? Note which ones.
-3. **Review comments** — read `comments.json` to understand the full conversation.
+Then drill into details only as needed:
+
+1. **Merge conflicts** — summary.md shows mergeable status. If `CONFLICTING`, rebase is needed first.
+2. **CI status** — summary.md lists failing checks. Read `ci.json` only if you need the full check run details.
+3. **Review comments** — summary.md shows counts and authors. Read individual comment files (`comments/01.json`, `02.json`, etc.) **newest first** — start from the highest number. Don't read `comments.json` directly (it may exceed token limits).
+4. **Diff** — if the diff is large, use `jq '.[] | .filename'` to list files first, then read individual file patches with `jq '.[] | select(.filename == "path/to/file.go")'`.
 
 Determine the fix order:
 1. Rebase first (if conflicts exist) — everything else depends on a clean base
@@ -87,7 +92,7 @@ After rebase:
 
 ### Phase 4: Evaluate Reviewer Comments
 
-Read `comments.json` — this is a chronological stream of all comments on the PR. Each comment has:
+Read the individual comment files in `comments/` **newest first** (highest number first). Each comment file has:
 
 ```json
 {

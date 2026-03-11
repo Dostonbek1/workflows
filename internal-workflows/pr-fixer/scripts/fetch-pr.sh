@@ -121,6 +121,11 @@ python3 "${SCRIPT_DIR}/merge-comments.py" \
     --review-comments "${TMPDIR}/review_comments.json" \
     --output "${OUTPUT_DIR}/comments.json"
 
+# -- Generate per-file diff index (for large diffs) --
+echo "  Generating diff index..." >&2
+jq -r '.[] | "\(.status)\t\(.additions)\t\(.deletions)\t\(.filename)"' \
+    "${OUTPUT_DIR}/diff.json" 2>/dev/null > "${OUTPUT_DIR}/diff-index.txt" || true
+
 # -- Summary --
 COMMENT_COUNT=$(jq 'length' "${OUTPUT_DIR}/comments.json" 2>/dev/null || echo "0")
 DIFF_COUNT=$(jq 'length' "${OUTPUT_DIR}/diff.json" 2>/dev/null || echo "0")
@@ -130,7 +135,7 @@ MERGEABLE=$(jq -r '.mergeable // "unknown"' "${OUTPUT_DIR}/pr.json" 2>/dev/null 
 echo ""
 echo "Fetch complete for PR #${PR_NUM}:"
 echo "  Mergeable: ${MERGEABLE}"
-echo "  Comments:  ${COMMENT_COUNT} (unified stream)"
-echo "  Diff files: ${DIFF_COUNT}"
+echo "  Comments:  ${COMMENT_COUNT} (unified stream + per-comment files)"
+echo "  Diff files: ${DIFF_COUNT} (index: diff-index.txt)"
 echo "  CI checks: ${CI_COUNT}"
 echo "  Output:    ${OUTPUT_DIR}/"
